@@ -1,10 +1,7 @@
 import os
 import requests
 from datetime import datetime
-from inicializacao import (
-    iniciar_sessao,
-    selecionar_usuario
-)
+from inicializacao import iniciar_sessao, selecionar_usuario
 
 BASE_URL = "https://cliente-clound.onrender.com"
 
@@ -17,7 +14,6 @@ def limpar_tela():
 
 
 def mostrar_saudacao(usuario):
-
     hora = datetime.now().hour
 
     if hora < 12:
@@ -31,16 +27,13 @@ def mostrar_saudacao(usuario):
     print("No que posso auxiliar hoje?\n")
 
 
-def trocar_usuario(usuario):
-
-    print("\nSalvando conversa atual...\n")
-
+def encerrar_sessao(usuario):
+    """Envia comando /sair para salvar memória no backend"""
     try:
-
-        requests.post(
+        r = requests.post(
             f"{BASE_URL}/chat",
             json={
-                "texto": "sair",
+                "texto": "/sair",
                 "id": usuario.get("id"),
                 "nome": usuario["nome"],
                 "pronome": usuario["pronome"],
@@ -50,13 +43,21 @@ def trocar_usuario(usuario):
             timeout=30
         )
 
-    except Exception:
-        pass
+        resposta = r.json().get("resposta", "")
+        print("SEMA:", resposta)
+
+    except Exception as e:
+        print("Erro ao encerrar sessão:", e)
+
+
+def trocar_usuario(usuario):
+    print("\nSalvando conversa atual...\n")
+
+    encerrar_sessao(usuario)
 
     novo_usuario = selecionar_usuario()
 
     limpar_tela()
-
     mostrar_saudacao(novo_usuario)
 
     return novo_usuario
@@ -68,7 +69,6 @@ def trocar_usuario(usuario):
 usuario = iniciar_sessao()
 
 limpar_tela()
-
 mostrar_saudacao(usuario)
 
 
@@ -85,17 +85,22 @@ while True:
     # =========================
     # TROCAR USUÁRIO
     # =========================
-    if texto.lower() == "trocar usuario":
-
+    if texto.lower() == "/trocar usuario":
         usuario = trocar_usuario(usuario)
-
         continue
+
+    # =========================
+    # SAIR DO PROGRAMA
+    # =========================
+    if texto.lower() == "/sair":
+        encerrar_sessao(usuario)
+        print("Encerrando...")
+        break
 
     # =========================
     # CHAT NORMAL
     # =========================
     try:
-
         r = requests.post(
             f"{BASE_URL}/chat",
             json={
@@ -109,22 +114,9 @@ while True:
             timeout=30
         )
 
-        resposta = r.json().get(
-            "resposta",
-            ""
-        )
+        resposta = r.json().get("resposta", "")
 
     except Exception as e:
-
         resposta = f"Erro de conexão: {e}"
 
     print("SEMA:", resposta)
-
-    # =========================
-    # ENCERRAR PROGRAMA
-    # =========================
-    if "sessão finalizada" in resposta.lower():
-
-        print("Encerrando...")
-
-        break
